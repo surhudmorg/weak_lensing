@@ -226,11 +226,11 @@ class nfw_projection:                                           # takes paramete
 
             def integrand3(theta,R,R0):
                 r = np.sqrt(R ** 2 + R0 ** 2 + 2 * R * R0 * np.cos(theta))
+
                 return self.spline_fitted_sigma_R(r)
 
-            integration3 = quad(integrand3, 0, 2.0*np.pi,args=(R,R0))
-
-            return integration3[0] /2.0*np.pi
+            self.int3 = quad(integrand3,0,2*np.pi,args=(R,R0))
+            return self.int3 [0] /(2.0*np.pi)
 
 #
     def sigma_mean_parent(self, R, R0):
@@ -333,13 +333,13 @@ if __name__ == "__main__":
 
     settalite_dist = 0.0#parent.r200/np.sqrt(2)
 
-    rpbin = np.logspace(-2.6, np.log10(2 *parent.r200), 50)
+    rpbin = np.logspace(-2.6, np.log10(4 *parent.r200), 50)
 
     rdbin = np.logspace(-2.6, np.log10(4 * settalite.r200), 50)
 
     #plot for  diff_sett_distances
 
-    for dist in np.arange( parent.r200/2 , 2.0*parent.r200,(2.0*parent.r200-parent.r200/4.0)/5.0):
+    for dist in np.arange( parent.r200/2 , 2.0*parent.r200,(2.0*parent.r200-parent.r200)/5):
         x_d = []
         y_d = []
         x_p = []
@@ -348,7 +348,7 @@ if __name__ == "__main__":
         for kk in range(0, len(rdbin)):
             x_d.append(rdbin[kk])
             y_d.append(settalite.delta_sigma_daughter(rdbin[kk])/1e12)
-            y_p.append(parent.delta_sigma_parent(rdbin[kk],settalite_dist)/1e12)
+            y_p.append(parent.delta_sigma_parent(rdbin[kk],0)/1e12)
 
         xd=np.array(x_d)
         xp=np.array(x_p)
@@ -357,13 +357,13 @@ if __name__ == "__main__":
         yresult=yp+yd
         plt.plot(xd, yp, 'r*-', label='parent halo contribution')
         plt.plot(xd, yd,'b+--', label='daughter halo contribution')
-        plt.plot(xd, yresult,'ob', label='addition of both')
+        #plt.plot(xd, yresult,'ob', label='addition of both')
         plt.xlim(0.05, )
-        plt.ylim(-100,600)
+        #plt.ylim(-100,600)
         plt.xscale('log')
         plt.xlabel('R (Mpc h-1)')
         plt.ylabel(r'$\Delta \Sigma (R)$  ')
-        print(yp)
+        #print(yp)
 
         # plt.yscale('log')
         plt.legend()
