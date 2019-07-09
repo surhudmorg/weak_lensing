@@ -12,7 +12,7 @@ class constants(object):
     speed_of_light = 2.99792458e5                            # in km/s
     H0 = 100.0                                               # in units of h * km/sec/Mpc
     # c_by_H0=0.05*speed_of_light*0.0032615637967311         #present hubble radius in Giga year/h
-    c_by_H0 = 0.05 * speed_of_light                          # present hubble radius in  Mpc/h
+    c_by_H0 = 0.05 * (100./H0) * speed_of_light                          # present hubble radius in  Mpc/h
     omegam0 = 0.315                                         # in units of 1/h^2
     omegal0 = 0.6911                                         # in units of 1/h^2
     omegar0 = 8.24e-5                                        # in units of 1/h^2
