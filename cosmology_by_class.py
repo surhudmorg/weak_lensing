@@ -2,6 +2,7 @@ import numpy as np
 from scipy.integrate import quad
 import matplotlib.pyplot as plt
 from scipy.integrate import dblquad
+import pylab as pl
 
 #
 
@@ -146,20 +147,16 @@ class nfw_projection:                                           # takes paramete
 
 #
 
-        if R>self.r200:
-            return 0
-        else:
+        def dSigma_R(s,R):                        # s in z axis ....since we used z for redshift so we used s here
+            r = np.sqrt(R ** 2.0 + s ** 2.0)
+            return 1.0 / ((r / rs) * (1.0 + r / rs) ** 2)
 
-            def integrand2(s,R):                        # s in z axis ....since we used z for redshift so we used s here
-                r = np.sqrt(R ** 2.0 + s ** 2.0)
-                return 1.0 / ((r / rs) * (1.0 + r / rs) ** 2)
+        #ll = -(np.sqrt(r200 ** 2.0 - R ** 2.0))  # lower limit of intigration
+        ul = (np.sqrt((  ( 8.0*self.r200) ** 2.0 ) - R ** 2.0))  # upper limit of intigration
 
-            #ll = -(np.sqrt(r200 ** 2.0 - R ** 2.0))  # lower limit of intigration
-            ul = (np.sqrt((  ( 8.0*self.r200) ** 2.0 ) - R ** 2.0))  # upper limit of intigration
+        Sigma = quad(dSigma_R, 0, ul, args=R)
 
-            integration2 = quad(integrand2, 0, ul, args=R)
-
-            return integration2[0] *2.0* rho_not          # intigration2 is array of intigration value and error
+        return Sigma[0] *2.0* rho_not          # intigration2 is array of intigration value and error
 
 
 #
@@ -168,46 +165,40 @@ class nfw_projection:                                           # takes paramete
     def spline_fitted_sigma_R(self,R):                    #getting sigma_R by cubic spline fitting
 
 
-#
+        if R<0.01:  
+            if not self.bool_less_than_pointzeroone:
+                self.Sigma_lt_Rmin=self.sigma_R(0.01)
+                self.bool_less_than_pointzeroone=True
+            return self.Sigma_lt_Rmin
 
-
-        if R<0.01  and self.bool_less_than_pointzeroone==False:
-            self.value=self.sigma_R(0.01)
-            self.bool_less_than_pointzeroone=True
-            return self.value
-        elif R<0.01 and self.bool_less_than_pointzeroone==True:
-            return self.value
-        if R>self.r200:
+        if R>1.5*self.r200:
             return 0
 
 #
-
         if self.bool_splinesigma==False:
 
             x = []  # to fit cubic spline
             y = []  # to fit cubic spline
-            sampling=np.logspace(-2,np.log10(5*self.r200),30)
+            sampling=np.logspace(-2.0,np.log10(1.5*self.r200),30)
             for kk in range (0,len(sampling)):
                 x.append(sampling[kk])  # storing data to fit cubic spline
                 y.append(self.sigma_R(sampling[kk]))  # storing data to fit cubic spline
             from scipy.interpolate import CubicSpline
-            self.cs=CubicSpline(x,y)
+            self.cs=CubicSpline(np.log10(x), np.log10(y), extrapolate=False)
             self.bool_splinesigma = True
 
-            return  self.cs(R)
-        else:
-            return self.cs(R)
+        return 10.0**self.cs(np.log10(R))
 
-#
-
+    # Average Sigma(<Rmax)
     def sigma_mean_daughter(self,Rmax):
         value = 2 * np.pi * quad(lambda Rp: Rp * self.spline_fitted_sigma_R(Rp), 0.0, Rmax)[0] / (np.pi * Rmax ** 2)
         return value
 
 #
 
-    def sigma_average_daughter(self,Rmax):                                #sigma averaged overa a constant radius Rmax
-        return self.spline_fitted_sigma_R(Rmax)
+    # Average Sigma(R)
+    def sigma_average_daughter(self,R):                                #sigma averaged overa a constant radius Rmax
+        return self.spline_fitted_sigma_R(R)
 
 #
 
@@ -216,58 +207,51 @@ class nfw_projection:                                           # takes paramete
 
 #
 
-    def sigma_average_parent(self,R,R0):
+    # Average Sigma(R)
+    def sigma_average_parent(self,R,Rsat):
 
-        if R<0.01:
-            return 0
-        elif R>self.r200:
-            return 0
-        else:
+        def dSigma_R_theta(theta,R,Rsat):
+            r = np.sqrt(R ** 2 + Rsat ** 2 + 2 * R * Rsat * np.cos(theta))
 
-            def integrand3(theta,R,R0):
-                r = np.sqrt(R ** 2 + R0 ** 2 + 2 * R * R0 * np.cos(theta))
+            return self.spline_fitted_sigma_R(r)
 
-                return self.spline_fitted_sigma_R(r)
-
-            self.int3 = quad(integrand3,0,2*np.pi,args=(R,R0))
-            return self.int3 [0] /(2.0*np.pi)
+        self.int3 = 2.*quad(dSigma_R_theta,0,np.pi,args=(R,Rsat))[0]
+        return self.int3 /(2.0*np.pi)
 
 #
-    def sigma_mean_parent(self, R, R0):
-        def integrand5( radius, R0):
-            return self.spline_fitted_avg_parent(radius,R0)*radius
+    # Average Sigma(<R)
+    def sigma_mean_parent(self, R, Rsat):
+        def integrand5( radius, Rsat):
+            ans = self.spline_fitted_avg_parent(radius,Rsat)*radius
+            return ans
 
-        integration5 = quad(integrand5, 0, R, args=(R0))
+        integration5 = quad(integrand5, 0, R, args=(Rsat))
 
+        print R, integration5
         return 2*integration5[0]/R**2
 
 #
 
-    def spline_fitted_avg_parent(self,R,R0):
+    def spline_fitted_avg_parent(self,R,Rsat):
 
-        if R<0.01  and self.bool_spline_avg_lessthanpointzeroone==False:
-            self.value=self.sigma_average_parent(0.01,R0)
-            self.bool_spline_avg_lessthanpointzeroone=True
-            return self.value
-        elif R<0.01 and self.bool_spline_avg_lessthanpointzeroone==True:
-            return self.value
-        if R>self.r200:
-            return 0
-        if self.bool_spline_avg == False:
+        if not self.bool_spline_avg:
 
             x = []  # to fit cubic spline
             y = []  # to fit cubic spline
-            sampling=np.logspace(-2,5*self.r200,30)
+            sampling=np.logspace(-2.0,np.log10(self.r200),30)
             for kk in range(0,len(sampling)):
                 x.append(sampling[kk])  # storing data to fit cubic spline
-                y.append(self.sigma_average_parent(sampling[kk],R0))  # storing data to fit cubic spline
+                y.append(self.sigma_average_parent(sampling[kk],Rsat))  # storing data to fit cubic spline
             from scipy.interpolate import CubicSpline
-            self.css = CubicSpline(x, y)
+            print(x, y)
+            self.css = CubicSpline(np.log10(x), np.log10(y), extrapolate=False)
             self.bool_spline_avg = True
-            return self.css(R,R0)
 
-        else:
-            return self.css(R,R0)
+        if R<1e-2:
+            return 10.0**self.css(-2.0)
+
+        ans = 10.**self.css(np.log10(R))
+        return ans
 
 #
 
@@ -325,7 +309,64 @@ class nfw_projection:                                           # takes paramete
 
 if __name__ == "__main__":
 
+    satellite=nfw_projection(2e14, 10.0)                      #definifn a of nfw_projection type
+    Rp = np.logspace(-2.6, np.log10(satellite.r200), 50)
 
+    Sigma_satellite_direct = Rp*0.0
+    Sigma_satellite_fromspline = Rp*0.0
+
+    for ii in range(Rp.size):
+        Sigma_satellite_direct[ii] = satellite.sigma_R(Rp[ii])
+        Sigma_satellite_fromspline[ii] = satellite.spline_fitted_sigma_R(Rp[ii])
+
+    ax = pl.subplot(2, 2, 1)
+    ax.plot(Rp, Sigma_satellite_direct)
+    ax.plot(Rp, Sigma_satellite_fromspline)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+
+    # Delta Sigma
+    DeltaSigma_satellite = Rp*0.0
+    for ii in range(Rp.size):
+        DeltaSigma_satellite[ii] = satellite.delta_sigma_daughter(Rp[ii])
+
+    ax = pl.subplot(2, 2, 2)
+    ax.plot(Rp, DeltaSigma_satellite/1.E12)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_ylim(1.0, 600.0)
+
+
+    # Host 
+    parent=nfw_projection(2e14, 10.0)                      #definifn a of nfw_projection type
+    Sigma_parent_direct = Rp*0.0
+    Sigma_parent_fromspline = Rp*0.0
+    Rsat = 0.3*parent.r200
+
+    for ii in range(Rp.size):
+        Sigma_parent_direct[ii] = parent.sigma_average_parent(Rp[ii], Rsat)
+        Sigma_parent_fromspline[ii] = parent.spline_fitted_avg_parent(Rp[ii], Rsat)
+
+    ax = pl.subplot(2, 2, 3)
+    ax.plot(Rp, Sigma_parent_direct)
+    ax.plot(Rp, Sigma_parent_fromspline)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+
+    # Host Delta Sigma
+    DeltaSigma_parent = Rp*0.0
+    for ii in range(Rp.size):
+        DeltaSigma_parent[ii] = parent.delta_sigma_parent(Rp[ii], Rsat)
+
+    ax = pl.subplot(2, 2, 4)
+    ax.plot(Rp, DeltaSigma_parent/1.E12)
+    ax.set_xscale("log")
+    #ax.set_yscale("log")
+    #ax.set_ylim(-100.0, 600.0)
+
+    pl.savefig("Diagnostics.png")
+
+    '''
     settalite=nfw_projection(2e14, 10)                      #definifn a of nfw_projection type
     parent=nfw_projection(2e14,10)
 
@@ -369,3 +410,4 @@ if __name__ == "__main__":
         plt.legend()
         plt.savefig("%.2f.png" %dist)
         plt.clf()
+    '''
