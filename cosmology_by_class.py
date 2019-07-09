@@ -5,7 +5,7 @@ from scipy.integrate import dblquad
 
 #
 
-class constents(object):
+class constants(object):
     """useful constants"""
     # constant of nature
     speed_of_light = 2.99792458e5                            # in km/s
@@ -24,7 +24,7 @@ class constents(object):
 
 
 
-class cosmology_distances(constents):
+class cosmology_distances(constants):
     """useful functions for cosmology """
 
 #
@@ -95,7 +95,7 @@ class cosmology_distances(constents):
 
 #
 
-    def dlumonicity(self, z):                                # lumonicity distance
+    def dluminosity(self, z):                                # luminosity distance
         return (1.0 + z) * self.dconformal_transverse(z)
 
 #
@@ -122,8 +122,8 @@ class nfw_projection:                                           # takes paramete
     def __init__(self,mass,c):
         self.mass=mass
         self.c=c
-        self.omegam = constents.omegam0
-        self.rho_crit = constents.rho_crit0
+        self.omegam = constants.omegam0
+        self.rho_crit = constants.rho_crit0
         self.PI = np.pi
         self.r200 = ((self.mass) / (200 * self.rho_crit * self.omegam * (4.0 * self.PI / 3.0))) ** (1.0 / 3.0)  # in Mpc
         self.bool_splinesigma=False
@@ -289,7 +289,7 @@ class nfw_projection:                                           # takes paramete
             #print ("for given scale factor = {} correspond to redshift = {}".format(scale, redshift))
             #print ("hubble distance  = {} corresponding  to redshift  = {}".format(dist,redshift))
             #print(cosmo.speed_of_light)
-            #print(constents.speed_of_light)
+            #print(constants.speed_of_light)
             #print cosmo.omegak
             #print  cosmo.dconformal(1)
 
@@ -302,7 +302,7 @@ class nfw_projection:                                           # takes paramete
             i = 0
             while i <1000:
             print(i)
-            file.write("%3.5f \t %f \t %f \t %f  \n" % (i,cosmo.dconformal_los(i),cosmo.dangular(i),cosmo.dlumonicity(i)))
+            file.write("%3.5f \t %f \t %f \t %f  \n" % (i,cosmo.dconformal_los(i),cosmo.dangular(i),cosmo.dluminosity(i)))
             if i<2:
                 i+=0.0001
             elif i>=2 and i<100:
